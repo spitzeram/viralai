@@ -33,7 +33,7 @@ def detect_video_content(file_path):
       - Spoken language: Hebrew
       - On-screen text: English
       - No official subtitles
-    And we generate a video overview accordingly.
+    And we generate a detailed video overview.
     """
     spoken = ['Hebrew']
     on_screen = ['English']
@@ -41,7 +41,7 @@ def detect_video_content(file_path):
     overview = (
         "The video features dynamic Hebrew dialogue accompanied by occasional on-screen English text. "
         "No official subtitles were detected, which might limit accessibility for non-Hebrew speakers. "
-        "Overall, the content appears to be informal and conversational, likely targeting a bilingual audience."
+        "Overall, the content appears informal and conversational, targeting a bilingual audience."
     )
     return {
         'spoken_languages': spoken,
@@ -60,7 +60,7 @@ def compute_score(value, lower, upper):
         return 60 + (value - lower) / (upper - lower) * 40
 
 def compute_consistency_score(std, range_span):
-    """Compute a consistency score from 60 to 100 based on std deviation."""
+    """Compute a consistency score from 60 to 100 based on the standard deviation."""
     ratio = min(std, range_span) / range_span
     return 60 + (1 - ratio) * 40
 
@@ -127,64 +127,54 @@ def process_video_frames(file_path, num_samples=10):
         ret, frame = cap.read()
         if not ret:
             break
-        
         if count % sample_rate == 0:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
-            # Contrast & sharpness
+            # Contrast & sharpness using variance of Laplacian
             laplacian = cv2.Laplacian(gray, cv2.CV_64F)
             contrast = laplacian.var()
             contrast_list.append(contrast)
             sharpness_list.append(contrast)
-            
-            # Saturation
+            # Saturation from HSV
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             saturation = hsv[:,:,1].mean()
             saturation_list.append(saturation)
-            
-            # Edge density
+            # Edge density using Canny
             edges = cv2.Canny(gray, 100, 200)
             edge_density = (np.count_nonzero(edges) / edges.size) * 100
             edge_density_list.append(edge_density)
-            
             # Color variance
             color_var = np.var(frame)
             color_variance_list.append(color_var)
-            
-            # Face detection
+            # Face detection and area sum
             faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
             face_count = len(faces)
             face_count_list.append(face_count)
-            total_face_area = sum([w*h for (x, y, w, h) in faces])
+            total_face_area = sum([w * h for (x, y, w, h) in faces])
             if (face_count > best_face_count) or (face_count == best_face_count and total_face_area > best_face_area):
                 best_face_count = face_count
                 best_face_area = total_face_area
                 best_face_frame = frame.copy()
                 best_face_index = frame_index
-            
+            # Fallback: best color variance
             if color_var > best_color_var:
                 best_color_var = color_var
                 best_color_frame = frame.copy()
                 best_color_index = frame_index
-            
-            # Visual complexity
+            # Visual complexity via entropy
             hist = cv2.calcHist([gray], [0], None, [256], [0,256])
             hist = hist.ravel() / hist.sum()
             hist = hist[np.nonzero(hist)]
             entropy = -np.sum(hist * np.log2(hist))
             visual_complexity_list.append(entropy)
-            
             # Motion intensity
             if prev_gray is not None:
                 diff = cv2.absdiff(gray, prev_gray)
                 motion = np.mean(diff)
                 motion_list.append(motion)
             prev_gray = gray
-
             frame_index += 1
         count += 1
     cap.release()
-
     camera_stability = 100 - np.std(motion_list) if motion_list else 100
 
     thumbnail_path = None
@@ -271,8 +261,8 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Duration Efficiency",
         'score': duration_efficiency,
-        'explanation': (f"The video duration of {duration:.2f}s is optimal for social media." 
-                        if duration < 60 else "Video duration is longer than ideal.")
+        'explanation': (f"Video duration of {duration:.2f}s is optimal." if duration < 60 
+                        else "Video duration is longer than ideal.")
     })
 
     # 2. Visual Resolution
@@ -281,7 +271,7 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Visual Resolution",
         'score': resolution_score,
-        'explanation': f"Resolution is {width}x{height} which is {'excellent' if resolution_score > 80 else 'adequate'}."
+        'explanation': f"Resolution is {width}x{height} ({'excellent' if resolution_score > 80 else 'adequate'})."
     })
 
     # 3. Average Brightness
@@ -293,12 +283,12 @@ def get_video_metrics(clip, file_path, video_content):
         'explanation': f"Average brightness is {brightness:.1f}."
     })
 
-    # 4. Audio Clarity (Legacy)
+    # 4. Audio Clarity (Legacy, simulated)
     audio_clarity_legacy = random.randint(70, 95)
     metrics.append({
         'name': "Audio Clarity (Legacy)",
         'score': audio_clarity_legacy,
-        'explanation': "Simulated audio clarity measure."
+        'explanation': "Simulated measure of audio clarity."
     })
 
     # 5. Subtitles Effectiveness
@@ -306,7 +296,7 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Subtitles Effectiveness",
         'score': subs_score,
-        'explanation': ("Subtitles are present, enhancing accessibility." 
+        'explanation': ("Subtitles enhance accessibility." 
                         if video_content['subtitles_present'] else "No official subtitles detected.")
     })
 
@@ -316,7 +306,7 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Multilingual Appeal",
         'score': multilingual_appeal,
-        'explanation': (f"Spoken: {', '.join(video_content['spoken_languages'])}; " 
+        'explanation': (f"Spoken: {', '.join(video_content['spoken_languages'])}; "
                         f"On-screen: {', '.join(video_content['on_screen_text_languages'])}.")
     })
 
@@ -416,7 +406,7 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Contrast Consistency",
         'score': compute_consistency_score(contrast_std, 250),
-        'explanation': f"Contrast consistency is measured by a std of {contrast_std:.2f}."
+        'explanation': f"Contrast consistency (std) is {contrast_std:.2f}."
     })
 
     # 21–24: Audio Analysis
@@ -424,7 +414,7 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Audio Loudness",
         'score': audio_data['audio_loudness'],
-        'explanation': f"Loudness score: {audio_data['explanation']}"
+        'explanation': f"Loudness: {audio_data['explanation']}"
     })
     metrics.append({
         'name': "Speech Clarity",
@@ -439,7 +429,7 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Speech Emotion",
         'score': audio_data['speech_emotion'],
-        'explanation': "Simulated measure of emotional expression in speech."
+        'explanation': "Simulated measure of emotional expression."
     })
 
     # 25–100: Additional Derived Metrics
@@ -458,8 +448,7 @@ def get_video_metrics(clip, file_path, video_content):
             metrics.append({
                 'name': f"{descriptor} {base}",
                 'score': base_score,
-                'explanation': (f"The {descriptor.lower()} of {base.lower()} is {base_score:.2f}/100, "
-                                f"based on an average value of {mean_val:.2f}.")
+                'explanation': f"The {descriptor.lower()} of {base.lower()} is {base_score:.2f}/100, based on an average of {mean_val:.2f}."
             })
 
     placeholders_needed = 100 - len(metrics)
@@ -473,7 +462,7 @@ def get_video_metrics(clip, file_path, video_content):
     return metrics, thumbnail_path, thumbnail_reason
 
 def generate_summary_and_improvements(metrics):
-    """Generate an overall summary and suggestions based on metrics."""
+    """Generate overall summary and improvement suggestions based on metrics."""
     overall_score = sum(metric['score'] for metric in metrics) / len(metrics)
     primary_metrics = metrics[:10]
     best_metric = max(primary_metrics, key=lambda x: x['score'])
@@ -482,7 +471,7 @@ def generate_summary_and_improvements(metrics):
     if best_metric['score'] < 80:
         improvements.append("Consider refining overall video production techniques.")
     else:
-        improvements.append("The video shows many strengths; small tweaks could make it even better.")
+        improvements.append("The video shows many strengths; small tweaks could enhance it further.")
     if worst_metric['score'] < 80:
         improvements.append(f"Improve {worst_metric['name'].lower()} (current score: {worst_metric['score']}/100) for broader appeal.")
     summary = (f"Overall viral potential: {overall_score:.2f}/100. "
@@ -490,7 +479,7 @@ def generate_summary_and_improvements(metrics):
     return overall_score, summary, " ".join(improvements)
 
 def compute_recommended_platforms(computed_metrics):
-    """Simulate recommended platforms based on key metrics."""
+    """Simulate platform recommendations based on key metrics."""
     duration_efficiency = computed_metrics[0]['score']
     visual_resolution   = computed_metrics[1]['score']
     brightness_score    = computed_metrics[2]['score']
@@ -502,14 +491,14 @@ def compute_recommended_platforms(computed_metrics):
     emotional_impact    = computed_metrics[8]['score']
     content_originality = computed_metrics[9]['score']
     return {
-        "TikTok": int((duration_efficiency * 0.3 + engagement_factor * 0.4 + pacing * 0.3) / 1.0),
-        "Instagram": int((visual_resolution * 0.4 + emotional_impact * 0.3 + subtitles_effectiveness * 0.3) / 1.0),
-        "YouTube Shorts": int((duration_efficiency * 0.3 + content_originality * 0.4 + engagement_factor * 0.3) / 1.0),
-        "Facebook": int(((duration_efficiency + visual_resolution + engagement_factor + audio_clarity) / 4.0))
+        "TikTok": int((duration_efficiency * 0.3 + engagement_factor * 0.4 + pacing * 0.3)),
+        "Instagram": int((visual_resolution * 0.4 + emotional_impact * 0.3 + subtitles_effectiveness * 0.3)),
+        "YouTube Shorts": int((duration_efficiency * 0.3 + content_originality * 0.4 + engagement_factor * 0.3)),
+        "Facebook": int(((duration_efficiency + visual_resolution + engagement_factor + audio_clarity) / 4))
     }
 
 def analyze_video(file_path):
-    """Main function: Analyze video for viral potential and return results as a dictionary."""
+    """Main function to analyze video and return analysis results."""
     try:
         clip = VideoFileClip(file_path)
     except Exception as e:
@@ -519,16 +508,13 @@ def analyze_video(file_path):
         if clip.audio:
             clip.audio.reader.close_proc()
         return {'error': 'Video exceeds the 60 seconds limit.'}
-
     video_content = detect_video_content(file_path)
     metrics, thumbnail_path, thumbnail_reason = get_video_metrics(clip, file_path, video_content)
     overall_score, summary, improvements = generate_summary_and_improvements(metrics)
     recommended_platforms = compute_recommended_platforms(metrics)
-
     clip.reader.close()
     if clip.audio:
         clip.audio.reader.close_proc()
-
     analysis = {
         'duration': clip.duration,
         'overall_score': overall_score,
