@@ -1,0 +1,22 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment folders
+venv/
+env/
+
+# Distribution files
+build/
+dist/
+*.egg-info/
+
+# OS-specific files
+.DS_Store
+
+# Log files
+*.log
+
+# Uploaded files (optional, if you want to ignore them)
+uploads/
