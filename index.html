@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Viral Video Analyzer</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <style>
+    body { background-color: #f8f9fa; }
+    .upload-container { margin-top: 100px; }
+    .upload-box {
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container upload-container">
+    <div class="row justify-content-center">
+      <div class="col-md-6 upload-box">
+        <h2 class="text-center mb-4">Viral Video Analyzer</h2>
+        <p class="text-center">Upload a video (up to 60 seconds) to see if it has viral potential across social networks!</p>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="alert alert-danger" role="alert">
+              {% for message in messages %}
+                {{ message }}
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        <form method="POST" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="video">Select Video File</label>
+            <input type="file" class="form-control-file" id="video" name="video" accept="video/*" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Analyze Video</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
