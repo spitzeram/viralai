@@ -25,15 +25,16 @@ def allowed_file(filename):
 def detect_video_content(file_path):
     """
     Simulate detection of video content using:
-      - Speech-to-text (for spoken languages)
-      - OCR (for on-screen text)
-      - Subtitle parsing (to see if subtitles are present)
-    
+      - Speech-to-text for spoken languages
+      - OCR for on-screen text
+      - Subtitle parsing to determine subtitle presence
+
     For this demo, we assume:
       - Spoken language: Hebrew
       - On-screen text: English
       - No official subtitles
-    And we generate a detailed video overview.
+
+    Generates a detailed video overview accordingly.
     """
     spoken = ['Hebrew']
     on_screen = ['English']
@@ -60,12 +61,12 @@ def compute_score(value, lower, upper):
         return 60 + (value - lower) / (upper - lower) * 40
 
 def compute_consistency_score(std, range_span):
-    """Compute a consistency score from 60 to 100 based on the standard deviation."""
+    """Compute a consistency score (60 to 100) based on standard deviation."""
     ratio = min(std, range_span) / range_span
     return 60 + (1 - ratio) * 40
 
 def compute_average_brightness(file_path, num_samples=10):
-    """Sample frames and compute average brightness."""
+    """Sample frames from the video and compute average brightness."""
     cap = cv2.VideoCapture(file_path)
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     brightness_values = []
@@ -89,11 +90,11 @@ def compute_average_brightness(file_path, num_samples=10):
 
 def process_video_frames(file_path, num_samples=10):
     """
-    Process video frames to compute metrics such as contrast, saturation, face count, etc.
-    Also choose a "best" frame for the thumbnail:
+    Process video frames to compute metrics (contrast, saturation, face count, etc.)
+    and choose a "best" frame for a thumbnail.
       - Prefer the frame with the highest face count.
-      - If tied, use the frame with the largest total face area.
-      - If no faces are detected, fallback to the frame with the highest color variance.
+      - If tied, choose the frame with the largest total face area.
+      - If no faces are detected, use the frame with the highest color variance.
     """
     cap = cv2.VideoCapture(file_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -119,7 +120,6 @@ def process_video_frames(file_path, num_samples=10):
     best_color_index = 0
 
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    
     prev_gray = None
     count = 0
     frame_index = 0
@@ -129,23 +129,23 @@ def process_video_frames(file_path, num_samples=10):
             break
         if count % sample_rate == 0:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            # Contrast & sharpness using variance of Laplacian
+            # Compute contrast and sharpness via variance of Laplacian
             laplacian = cv2.Laplacian(gray, cv2.CV_64F)
             contrast = laplacian.var()
             contrast_list.append(contrast)
             sharpness_list.append(contrast)
-            # Saturation from HSV
+            # Compute saturation from HSV
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             saturation = hsv[:,:,1].mean()
             saturation_list.append(saturation)
-            # Edge density using Canny
+            # Compute edge density using Canny
             edges = cv2.Canny(gray, 100, 200)
             edge_density = (np.count_nonzero(edges) / edges.size) * 100
             edge_density_list.append(edge_density)
-            # Color variance
+            # Compute color variance
             color_var = np.var(frame)
             color_variance_list.append(color_var)
-            # Face detection and area sum
+            # Face detection and total face area
             faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
             face_count = len(faces)
             face_count_list.append(face_count)
@@ -155,18 +155,18 @@ def process_video_frames(file_path, num_samples=10):
                 best_face_area = total_face_area
                 best_face_frame = frame.copy()
                 best_face_index = frame_index
-            # Fallback: best color variance
+            # Fallback: track best color variance
             if color_var > best_color_var:
                 best_color_var = color_var
                 best_color_frame = frame.copy()
                 best_color_index = frame_index
-            # Visual complexity via entropy
+            # Compute visual complexity using entropy of grayscale histogram
             hist = cv2.calcHist([gray], [0], None, [256], [0,256])
             hist = hist.ravel() / hist.sum()
             hist = hist[np.nonzero(hist)]
             entropy = -np.sum(hist * np.log2(hist))
             visual_complexity_list.append(entropy)
-            # Motion intensity
+            # Compute motion intensity (difference between consecutive frames)
             if prev_gray is not None:
                 diff = cv2.absdiff(gray, prev_gray)
                 motion = np.mean(diff)
@@ -215,7 +215,7 @@ def process_video_frames(file_path, num_samples=10):
 # ------------------- AUDIO ANALYSIS -------------------
 
 def analyze_audio(clip):
-    """Analyze audio to compute loudness and simulated speech metrics."""
+    """Analyze the audio track to compute loudness and simulated speech metrics."""
     if not clip.audio:
         return {
             'audio_loudness': 0,
@@ -252,7 +252,7 @@ def analyze_audio(clip):
 # ------------------- METRIC CALCULATION -------------------
 
 def get_video_metrics(clip, file_path, video_content):
-    """Combine high-level, frame, audio, and derived metrics to total 100 factors."""
+    """Combine high-level, frame, audio, and derived metrics (total 100 factors)."""
     metrics = []
 
     # 1. Duration Efficiency
@@ -261,8 +261,7 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Duration Efficiency",
         'score': duration_efficiency,
-        'explanation': (f"Video duration of {duration:.2f}s is optimal." if duration < 60 
-                        else "Video duration is longer than ideal.")
+        'explanation': f"Video duration of {duration:.2f}s is {'optimal' if duration < 60 else 'longer than ideal'}."
     })
 
     # 2. Visual Resolution
@@ -296,8 +295,8 @@ def get_video_metrics(clip, file_path, video_content):
     metrics.append({
         'name': "Subtitles Effectiveness",
         'score': subs_score,
-        'explanation': ("Subtitles enhance accessibility." 
-                        if video_content['subtitles_present'] else "No official subtitles detected.")
+        'explanation': ("Subtitles enhance accessibility." if video_content['subtitles_present'] 
+                        else "No official subtitles detected.")
     })
 
     # 6. Multilingual Appeal
@@ -450,7 +449,6 @@ def get_video_metrics(clip, file_path, video_content):
                 'score': base_score,
                 'explanation': f"The {descriptor.lower()} of {base.lower()} is {base_score:.2f}/100, based on an average of {mean_val:.2f}."
             })
-
     placeholders_needed = 100 - len(metrics)
     for i in range(placeholders_needed):
         metrics.append({
@@ -498,7 +496,7 @@ def compute_recommended_platforms(computed_metrics):
     }
 
 def analyze_video(file_path):
-    """Main function to analyze video and return analysis results."""
+    """Main function to analyze video and return a dictionary of results."""
     try:
         clip = VideoFileClip(file_path)
     except Exception as e:
