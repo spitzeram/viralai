@@ -18,5 +18,5 @@ dist/
 # Log files
 *.log
 
-# Uploaded files (optional, if you want to ignore them)
+# Uploaded files (if you don't want them in version control)
 uploads/
