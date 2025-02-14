@@ -5,9 +5,9 @@ This Flask application analyzes short videos (up to 60 seconds) for viral potent
 ## Features
 
 - Video upload and analysis
-- Detailed metrics on video quality and virality
+- 100 detailed metrics on video quality and virality factors
 - Automatic thumbnail suggestion based on face detection and color analysis
-- Simulated detection of spoken language, on-screen text, and subtitles to generate a video overview
+- Simulated detection of spoken language, on-screen text, and subtitles
 - Integration-ready for deployment on DigitalOcean and linking from a Wix website
 
 ## Project Structure
